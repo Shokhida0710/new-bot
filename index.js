@@ -1,46 +1,344 @@
 import TelegramBot from "node-telegram-bot-api";
 const TOKEN = "8238239595:AAED9NKuyLn97sNvaNpjzAqDxxJWSFy4sSw"
+const ADMIN_CHAT_ID = '7675246291'; 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
+
+bot.sendMessage(ADMIN_CHAT_ID, '🚀 Bot ishga tushdi va bu test xabari.').catch(error => {
+    console.error('⚠️ ADMINGA TEST XABAR YUBORISHDA XATO:', error.message);
+});
+
+const userStates = {};
+
+const STEPS = {
+    NONE: 0, 
+    WAITING_FOR_FULL_NAME: 1, 
+    WAITING_FOR_PHONE: 2, 
+    WAITING_FOR_DAY: 3,        
+    WAITING_FOR_TIME: 4,      
+};
+
+
 bot.on("message", (msg) => {
-    console.log(msg);
     const chatId = msg.chat.id;
     const text = msg.text;
-    const firstName = msg.from.first_name;
+    const firstName = msg.chat.first_name;
 
+    const userState = userStates[chatId] || { step: STEPS.NONE };
 
-    if (text === "/start") {
-    bot.sendMessage(
-        chatId,
-        `👋 Assalomu alaykum, ${firstName}!
+    if (text === "❌ Bekor qilish") {
+        delete userStates[chatId];
+        bot.sendMessage(chatId, `Ro'yxatdan o'tish bekor qilindi. Bosh menyuga qaytish uchun /start ni bosing.`, {
+            reply_markup: { remove_keyboard: true }
+        });
+        return;
+    }
 
-📚 100x Academy o‘quv markazining rasmiy botiga xush kelibsiz!
+   
+    if (userState.step === STEPS.WAITING_FOR_FULL_NAME) {
+        userState.fullName = text;
+        userState.step = STEPS.WAITING_FOR_PHONE;
 
-Bu bot orqali siz:
-• Kurslarimiz haqida batafsil ma’lumot olasiz  
-• Kurslarga onlayn ro‘yxatdan o‘tishingiz mumkin  
-• Jadval va to‘lovlar haqida ma’lumot olasiz  
+        bot.sendMessage(
+            chatId,
+            `Rahmat, **${userState.fullName}**!
+
+Endi, iltimos, siz bilan bog'lanishimiz mumkin bo‘lgan **telefon raqamingizni kiriting**.
+*Misol: +998901234567*
+            `,
+            {
+                parse_mode: "Markdown",
+                reply_markup: {
+                    keyboard: [
+                       
+                        [{ text: "❌ Bekor qilish" }]
+                    ],
+                    resize_keyboard: true,
+                    one_time_keyboard: true,
+                }
+            }
+        );
+        userStates[chatId] = userState;
+        return;
+    } 
+    
+    else if (userState.step === STEPS.WAITING_FOR_PHONE) {
+        let phoneNumber = text;
+
+        if (!/^\+?\d{9,15}$/.test(text.replace(/\s/g, ''))) {
+            bot.sendMessage(chatId, `⚠️ Noto'g'ri format. Iltimos, telefon raqamingizni to'g'ri kiriting (Masalan: +998901234567).`);
+            return;
+        }
+
+        userState.phoneNumber = phoneNumber;
+        userState.step = STEPS.WAITING_FOR_DAY;
+        bot.sendMessage(
+            chatId,
+            `A'lo! **${userState.phoneNumber}** raqami qabul qilindi.
+
+Iltimos, sizga kursga kelish uchun **qaysi kunlar qulay ekanligini** tanlang:`,
+            {
+                parse_mode: "Markdown",
+                reply_markup: { 
+                    inline_keyboard: [
+                        [{ text: "1️⃣ Toq kunlar (D/Ch/J)", callback_data: "day_odd" }],
+                        [{ text: "2️⃣ Juft kunlar (S/P/Sh)", callback_data: "day_even" }],
+                        [{ text: "❌ Bekor qilish", callback_data: "cancel_reg" }]
+                    ],
+                   
+                    remove_keyboard: true 
+                }
+            }
+        );
+        userStates[chatId] = userState;
+        return;
+    } 
+    
+    // ----------------------------------------------------
+    // ➡️ BOSQICH 3 va 4: Kun va Vaqt tugmalar orqali hal bo'ladi
+    // Bu yerda boshqa matn kutilmaydi, shuning uchun bu bosqichlar qo'shilmaydi.
+    // ----------------------------------------------------
+    
+    // ----------------------------------------------------
+    // ➡️ STANDART BUYRUQLAR
+    // ----------------------------------------------------
+    if (text == "/start" && userState.step === STEPS.NONE) {
+        // ... /start kodlari
+        bot.sendMessage(
+            chatId,
+            `👋 Assalomu alaykum, ${firstName}!
+
+📚 A+ Academy o‘quv markazining rasmiy botiga xush kelibsiz!
 
 Quyidagi menyudan kerakli bo‘limni tanlang 👇
-
-        `,
-         {
-        reply_markup: {
-            keyboard: [
-            [{ text: "📚 Kurslar" }, { text: "✍️ Ro‘yxatdan o‘tish" }],
-            [{ text: "ℹ️ Markaz haqida" }, { text: "💬 Fikr bildirish" }],
-            [{ text: "❓ Yordam" }],
-          ],
-            
-             resize_keyboard: true,
+            `,
+            {
+                reply_markup: {
+                    keyboard: [
+                        [{ text: "📚 Kurslar" }, { text: "✍️ Ro‘yxatdan o‘tish" }],
+                        [{ text: "ℹ️ Markaz haqida" }],
+                    ],
+                    resize_keyboard: true,
+                    remove_keyboard: false,
+                },
+            }
+        );
+    } else if (text == "📚 Kurslar" || text == "✍️ Ro‘yxatdan o‘tish") {
+        // ... Kurslar kodlari
+        bot.sendMessage(
+            chatId,
+            `🎓 Bizning o‘quv markazimizda quyidagi kurslar mavjud:
  
-    },
-     }
-    );
-    } else if (text === "==pho") {
-     
+👇 Quyidagi kurslardan birini tanlang va batafsil ma’lumot oling:
+            `,
+            {
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "🇬🇧 Ingliz tili", callback_data: "english" }],
+                        [{ text: "🇷🇺 Rus tili", callback_data: "russian" }],
+                        [{ text: "🧮 Matematika", callback_data: "math" }],
+                    ],
+                },
+            }
+        );
+    } else {
+        // Tushunmadim xabari (faqat bosqichda bo'lmaganda)
+        if (userState.step === STEPS.NONE) {
+             bot.sendMessage(
+                chatId,
+                `⚠️ Kechirasiz, men sizning xabaringizni tushunmadim. Asosiy menyu uchun /start ni bosing.`
+            );
+        }
     }
-} );
+});
 
- 
-console.log("Bot started...");
+
+// =======================================================
+// 📌 CALLBACK QUERY LISTENERI (Inline tugmalar uchun)
+// =======================================================
+
+bot.on("callback_query", (query) => {
+    const chatId = query.message.chat.id;
+    const messageId = query.message.message_id;
+    const data = query.data;
+
+    // --- Holat Boshqaruvi logikasi ---
+    const userState = userStates[chatId] || {};
+
+
+    // ----------------------------------------------------
+    // ➡️ Kurs Ma'lumoti: Ingliz tili
+    // ----------------------------------------------------
+    if (data === "english") {
+        bot.editMessageText( 
+            `🇬🇧 *Ingliz tili kursi haqida ma’lumot:*
+
+📘 Boshlang‘ich, o‘rta va yuqori darajalar mavjud.  
+🕒 Davomiyligi: 9 oy  
+👩‍🏫 O‘qituvchi: Tajribali ustozlar  
+📍 Joylashuv: Xorazm, Xiva shahri 
+💰 Narxi: Oyiga 550 000 so‘m  
+
+📅 Darslar haftasiga 3 marta, 2.00 soatdan.  
+            `,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: "Markdown",
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "✍️ Kursga yozilish", callback_data: "register_english" }],
+                        [{ text: "⬅️ Kurslar ro'yxati", callback_data: "back_to_courses" }]
+                    ]
+                }
+            }
+        );
+    }
+    
+    // ----------------------------------------------------
+    // ➡️ Ro'yxatdan o'tishni boshlash
+    // ----------------------------------------------------
+    else if (data === "register_english") {
+        userStates[chatId] = { step: STEPS.WAITING_FOR_FULL_NAME, course: "Ingliz tili" };
+
+        bot.sendMessage(
+            chatId,
+            `✍️ Ro‘yxatdan o‘tishni boshlaymiz.
+
+Iltimos, **Ism va Familiyangizni** to‘liq kiriting (Masalan: *Islomova Shohida*):
+            `,
+            {
+                parse_mode: "Markdown",
+                reply_markup: { remove_keyboard: true }
+            }
+        );
+        bot.answerCallbackQuery(query.id);
+    }
+
+    // ----------------------------------------------------
+    // ➡️ KUNLAR TANLANGANIDAN KEYIN (Vaqtni so'rash)
+    // ----------------------------------------------------
+    else if (data === "day_odd" || data === "day_even") {
+        
+        if (data === "day_odd") {
+            userState.contactDay = "Toq kunlar (D/Ch/J)";
+        } else {
+            userState.contactDay = "Juft kunlar (S/P/Sh)";
+        }
+        
+        userStates[chatId] = userState; 
+        userState.step = STEPS.WAITING_FOR_TIME; 
+
+        bot.editMessageText(
+            `Siz **${userState.contactDay}**ni tanladingiz. Rahmat!
+
+Endi o'zingizga qulay bo'lgan dars **vaqt oralig'ini** tanlang:`,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: "Markdown",
+                reply_markup: { 
+                    inline_keyboard: [
+                        [{ text: "⏰ 09:00 dan 11:00 gacha", callback_data: "time_9_11" }],
+                        [{ text: "🕑 14:00 dan 16:00 gacha", callback_data: "time_2_4" }],
+                        [{ text: "🕓 16:00 dan 18:00 gacha", callback_data: "time_4_6" }],
+                        [{ text: "❌ Bekor qilish", callback_data: "cancel_reg" }]
+                    ]
+                }
+            }
+        );
+    }
+
+    // ----------------------------------------------------
+    // ➡️ VAQT TANLANGANIDAN KEYIN (Yakuniy bosqich)
+    // ----------------------------------------------------
+    else if (data.startsWith("time_")) {
+        
+        let timeRange = "";
+        
+        if (data === "time_9_11") {
+            timeRange = "09:00 dan 11:00 gacha";
+        } else if (data === "time_2_4") {
+            timeRange = "14:00 dan 16:00 gacha";
+        } else if (data === "time_4_6") {
+            timeRange = "16:00 dan 18:00 gacha";
+        }
+        
+        userState.contactTime = timeRange; 
+
+        // --- Ro'yxatdan o'tish ma'lumotlarini tayyorlash ---
+        const registrationSummary = 
+`✅ *Yangi Ro'yxatdan O'tish (BOT orqali)*
+Kurs: ${userState.course || 'Aniqlanmagan'}
+Foydalanuvchi (TG): @${query.from.username || 'mavjud emas'}
+Chat ID: ${chatId}
+Ism-Familiya: *${userState.fullName || 'Noma\'lum'}*
+Telefon raqam: *${userState.phoneNumber || 'Noma\'lum'}*
+Qulay kun: *${userState.contactDay || 'Tanlanmagan'}*
+Qulay vaqt: *${userState.contactTime}*
+Ro'yxatdan o'tish vaqti: ${new Date().toLocaleString('uz-UZ')}
+        `;
+
+        // 1. Adminlarga xabar yuborish
+        bot.sendMessage(ADMIN_CHAT_ID, registrationSummary, { parse_mode: "Markdown" }).catch(err => {
+            console.error("ADMINGA XABAR YUBORISHDA XATO: ", err.message);
+        });
+
+        // 2. Foydalanuvchiga tasdiqlash
+        bot.editMessageText(
+            `🎉 Tabriklaymiz, **${userState.fullName || 'Ro\'yxatdan o\'tuvchi'}**!
+            
+Sizning *${userState.course || 'kurs'}* kursiga ro'yxatdan o'tish so'rovingiz qabul qilindi.
+Tanlagan vaqtingiz (${userState.contactDay || 'kun'}, ${userState.contactTime}) bo'yicha markazimiz xodimi tez orada siz bilan bog'lanadi.
+
+Asosiy menyuga qaytish uchun /start ni bosing.`,
+            { 
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: "Markdown" 
+            }
+        );
+
+        // Holatni tozalash
+        delete userStates[chatId];
+        bot.answerCallbackQuery(query.id, "Ro'yxatdan o'tish yakunlandi!");
+    }
+
+
+    // ----------------------------------------------------
+    // ➡️ Boshqa tugmalar (Kurslarga qaytish, Bekor qilish)
+    // ----------------------------------------------------
+    else if (data === "back_to_courses") {
+        // ... Kurslar ro'yxatiga qaytish kodlari
+        bot.editMessageText(
+            `🎓 Bizning o‘quv markazimizda quyidagi kurslar mavjud:
+// ... kurslar ro'yxati
+            `,
+            {
+                chat_id: chatId,
+                message_id: messageId,
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "🇬🇧 Ingliz tili", callback_data: "english" }],
+                        [{ text: "🇷🇺 Rus tili", callback_data: "russian" }],
+                        [{ text: "🧮 Matematika", callback_data: "math" }],
+                    ],
+                },
+            }
+        );
+    }
+    
+    // Ro'yxatdan o'tishni bekor qilish (Inline tugma)
+    else if (data === "cancel_reg") {
+        delete userStates[chatId];
+        bot.sendMessage(chatId, `Ro'yxatdan o'tish bekor qilindi. Bosh menyuga qaytish uchun /start ni bosing.`);
+        bot.deleteMessage(chatId, messageId).catch(()=>{});
+    }
+
+    // Boshqa callback_querylar uchun javob
+    else {
+        bot.answerCallbackQuery(query.id, "Batafsil ma'lumot tez orada qo'shiladi!");
+    }
+});
+
+console.log("Bot ishga tushdi...");
