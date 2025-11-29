@@ -1,5 +1,5 @@
 import TelegramBot from "node-telegram-bot-api";
-const TOKEN = "8238239595:AAED9NKuyLn97sNvaNpjzAqDxxJWSFy4sSw"
+const TOKEN = "8318712659:AAG5xAlmBkMo7y9Bu6EuUD1-ePFZjY7bzVU"
 const ADMIN_CHAT_ID = '7675246291'; 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
@@ -94,16 +94,7 @@ Iltimos, sizga kursga kelish uchun **qaysi kunlar qulay ekanligini** tanlang:`,
         return;
     } 
     
-    // ----------------------------------------------------
-    // ➡️ BOSQICH 3 va 4: Kun va Vaqt tugmalar orqali hal bo'ladi
-    // Bu yerda boshqa matn kutilmaydi, shuning uchun bu bosqichlar qo'shilmaydi.
-    // ----------------------------------------------------
-    
-    // ----------------------------------------------------
-    // ➡️ STANDART BUYRUQLAR
-    // ----------------------------------------------------
     if (text == "/start" && userState.step === STEPS.NONE) {
-        // ... /start kodlari
         bot.sendMessage(
             chatId,
             `👋 Assalomu alaykum, ${firstName}!
@@ -124,7 +115,6 @@ Quyidagi menyudan kerakli bo‘limni tanlang 👇
             }
         );
     } else if (text == "📚 Kurslar" || text == "✍️ Ro‘yxatdan o‘tish") {
-        // ... Kurslar kodlari
         bot.sendMessage(
             chatId,
             `🎓 Bizning o‘quv markazimizda quyidagi kurslar mavjud:
@@ -135,14 +125,11 @@ Quyidagi menyudan kerakli bo‘limni tanlang 👇
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: "🇬🇧 Ingliz tili", callback_data: "english" }],
-                        [{ text: "🇷🇺 Rus tili", callback_data: "russian" }],
-                        [{ text: "🧮 Matematika", callback_data: "math" }],
                     ],
                 },
             }
         );
     } else {
-        // Tushunmadim xabari (faqat bosqichda bo'lmaganda)
         if (userState.step === STEPS.NONE) {
              bot.sendMessage(
                 chatId,
@@ -153,22 +140,15 @@ Quyidagi menyudan kerakli bo‘limni tanlang 👇
 });
 
 
-// =======================================================
-// 📌 CALLBACK QUERY LISTENERI (Inline tugmalar uchun)
-// =======================================================
 
 bot.on("callback_query", (query) => {
     const chatId = query.message.chat.id;
     const messageId = query.message.message_id;
     const data = query.data;
 
-    // --- Holat Boshqaruvi logikasi ---
     const userState = userStates[chatId] || {};
 
 
-    // ----------------------------------------------------
-    // ➡️ Kurs Ma'lumoti: Ingliz tili
-    // ----------------------------------------------------
     if (data === "english") {
         bot.editMessageText( 
             `🇬🇧 *Ingliz tili kursi haqida ma’lumot:*
@@ -195,9 +175,6 @@ bot.on("callback_query", (query) => {
         );
     }
     
-    // ----------------------------------------------------
-    // ➡️ Ro'yxatdan o'tishni boshlash
-    // ----------------------------------------------------
     else if (data === "register_english") {
         userStates[chatId] = { step: STEPS.WAITING_FOR_FULL_NAME, course: "Ingliz tili" };
 
@@ -215,9 +192,6 @@ Iltimos, **Ism va Familiyangizni** to‘liq kiriting (Masalan: *Islomova Shohida
         bot.answerCallbackQuery(query.id);
     }
 
-    // ----------------------------------------------------
-    // ➡️ KUNLAR TANLANGANIDAN KEYIN (Vaqtni so'rash)
-    // ----------------------------------------------------
     else if (data === "day_odd" || data === "day_even") {
         
         if (data === "day_odd") {
@@ -320,8 +294,6 @@ Asosiy menyuga qaytish uchun /start ni bosing.`,
                 reply_markup: {
                     inline_keyboard: [
                         [{ text: "🇬🇧 Ingliz tili", callback_data: "english" }],
-                        [{ text: "🇷🇺 Rus tili", callback_data: "russian" }],
-                        [{ text: "🧮 Matematika", callback_data: "math" }],
                     ],
                 },
             }
