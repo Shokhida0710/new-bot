@@ -1,18 +1,37 @@
 import TelegramBot from "node-telegram-bot-api";
-const TOKEN = "8318712659:AAG5xAlmBkMo7y9Bu6EuUD1-ePFZjY7bzVU"
-const ADMIN_CHAT_ID = '7675246291'; 
+import mongoose from "mongoose";
+import {config } from "dotenv";
+config();
+
+const TOKEN = process.env.BOT_TOKEN;
+const ADMINS = ['8510225332','1850157221']; 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
+mongoose
+    .connect(process.env.MONGO_URI)
+    .then(() => {
+         console.log("db is connected...");
+    })
+    .catch(() => {
+        console.log(`Error: db is not connected...!`);
+    });
 
-bot.sendMessage(ADMIN_CHAT_ID, '🚀 Bot ishga tushdi va bu test xabari.').catch(error => {
-    console.error('⚠️ ADMINGA TEST XABAR YUBORISHDA XATO:', error.message);
+
+ADMINS.forEach(id => {
+    bot.sendMessage(id, '🚀 Bot ishga tushdi va bu test xabari.')
+        .catch(error => {
+            console.error('⚠️ ADMINGA TEST XABAR YUBORISHDA XATO:', error.message);
+        });
 });
+
 
 const userStates = {};
 
 const STEPS = {
     NONE: 0, 
     WAITING_FOR_FULL_NAME: 1, 
+
+
     WAITING_FOR_PHONE: 2, 
     WAITING_FOR_DAY: 3,        
     WAITING_FOR_TIME: 4,      
@@ -223,9 +242,6 @@ Endi o'zingizga qulay bo'lgan dars **vaqt oralig'ini** tanlang:`,
         );
     }
 
-    // ----------------------------------------------------
-    // ➡️ VAQT TANLANGANIDAN KEYIN (Yakuniy bosqich)
-    // ----------------------------------------------------
     else if (data.startsWith("time_")) {
         
         let timeRange = "";
@@ -240,7 +256,6 @@ Endi o'zingizga qulay bo'lgan dars **vaqt oralig'ini** tanlang:`,
         
         userState.contactTime = timeRange; 
 
-        // --- Ro'yxatdan o'tish ma'lumotlarini tayyorlash ---
         const registrationSummary = 
 `✅ *Yangi Ro'yxatdan O'tish (BOT orqali)*
 Kurs: ${userState.course || 'Aniqlanmagan'}
@@ -252,13 +267,13 @@ Qulay kun: *${userState.contactDay || 'Tanlanmagan'}*
 Qulay vaqt: *${userState.contactTime}*
 Ro'yxatdan o'tish vaqti: ${new Date().toLocaleString('uz-UZ')}
         `;
+ADMINS.forEach(id => {
+    bot.sendMessage(id, registrationSummary, { parse_mode: "Markdown" })
+        .catch(err => console.error("ADMINGA YUBORISHDA XATO:", err.message));
+});
 
-        // 1. Adminlarga xabar yuborish
-        bot.sendMessage(ADMIN_CHAT_ID, registrationSummary, { parse_mode: "Markdown" }).catch(err => {
-            console.error("ADMINGA XABAR YUBORISHDA XATO: ", err.message);
-        });
 
-        // 2. Foydalanuvchiga tasdiqlash
+
         bot.editMessageText(
             `🎉 Tabriklaymiz, **${userState.fullName || 'Ro\'yxatdan o\'tuvchi'}**!
             
@@ -273,17 +288,14 @@ Asosiy menyuga qaytish uchun /start ni bosing.`,
             }
         );
 
-        // Holatni tozalash
         delete userStates[chatId];
         bot.answerCallbackQuery(query.id, "Ro'yxatdan o'tish yakunlandi!");
     }
 
 
-    // ----------------------------------------------------
-    // ➡️ Boshqa tugmalar (Kurslarga qaytish, Bekor qilish)
-    // ----------------------------------------------------
+
+    
     else if (data === "back_to_courses") {
-        // ... Kurslar ro'yxatiga qaytish kodlari
         bot.editMessageText(
             `🎓 Bizning o‘quv markazimizda quyidagi kurslar mavjud:
 // ... kurslar ro'yxati
@@ -300,14 +312,12 @@ Asosiy menyuga qaytish uchun /start ni bosing.`,
         );
     }
     
-    // Ro'yxatdan o'tishni bekor qilish (Inline tugma)
     else if (data === "cancel_reg") {
         delete userStates[chatId];
         bot.sendMessage(chatId, `Ro'yxatdan o'tish bekor qilindi. Bosh menyuga qaytish uchun /start ni bosing.`);
         bot.deleteMessage(chatId, messageId).catch(()=>{});
     }
 
-    // Boshqa callback_querylar uchun javob
     else {
         bot.answerCallbackQuery(query.id, "Batafsil ma'lumot tez orada qo'shiladi!");
     }
